@@ -1,0 +1,12 @@
+work/
+output/
+secrets/
+.venv/
+.venv-tts/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+storygen.toml
+.env
+assets/models/*.onnx
+assets/models/*.bin

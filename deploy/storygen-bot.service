@@ -1,0 +1,21 @@
+# systemd *user* unit for the storygen Telegram bot (a separate bot from clipgen's).
+#   mkdir -p ~/.config/systemd/user && cp deploy/storygen-bot.service ~/.config/systemd/user/
+#   put the token in secrets/telegram_token (chmod 600), or
+#   echo 'STORYGEN_BOT_TOKEN=123:ABC...' > ~/.config/storygen-bot.env
+#   systemctl --user daemon-reload && systemctl --user enable --now storygen-bot
+#   loginctl enable-linger $USER      # keep it running when you are logged out
+#   journalctl --user -u storygen-bot -f
+[Unit]
+Description=storygen Telegram bot (story-time shorts from scratch)
+After=network-online.target
+
+[Service]
+WorkingDirectory=%h/projects/storygen
+EnvironmentFile=-%h/.config/storygen-bot.env
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/projects/storygen/.venv/bin/storygen bot
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "storygen"
+version = "0.1.0"
+description = "Made-up story-time shorts from scratch: Claude-written story, offline voice-over, word captions, satisfying ball-and-rings animation (free stack + Claude Code headless)."
+requires-python = ">=3.11"
+dependencies = [
+  "kokoro-onnx>=0.4",
+  "soundfile",
+  "faster-whisper>=1.0",
+  "opencv-python-headless>=4.8",
+  "numpy",
+  "requests",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+storygen = "storygen.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["storygen*"]

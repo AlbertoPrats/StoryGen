@@ -1,0 +1,41 @@
+# Copy to storygen.toml. Every key is optional; the values shown are the defaults.
+
+count = 1                       # stories per request (bot: nX)
+channel_handle = ""
+
+[story]
+target_seconds = 52.0           # narration length Claude aims for
+max_seconds = 58.0              # hard cap for the clip; the voice speeds up (or Claude shortens) to fit
+words_per_second = 2.6
+review = true                   # second Claude pass: a retention editor tightens the script
+hashtags = 10
+# genres = ["finding out a partner is cheating through one small wrong detail, and the truth is worse", ...]
+
+[voice]
+engine = "chatterbox"           # chatterbox (expressive, ~4x slower than real time on CPU) | kokoro (fast, flatter)
+# chatterbox_male = ["am_onyx"]   # Kokoro voice whose reference clip Chatterbox copies; "builtin" = its own voice
+# chatterbox_female = ["af_heart"]
+max_stretch = 1.15              # Chatterbox: fastest time-stretch used to fit max_seconds
+speed = 1.1                     # Kokoro speed
+max_speed = 1.3
+# male = ["am_michael", "am_adam", "am_onyx", "bm_george"]
+# female = ["af_heart", "af_bella", "af_nicole", "bf_emma"]
+align = true                    # word timings from faster-whisper (else spread by letter count)
+
+[scene]
+style = "random"                # random | layers | escape
+sfx_volume = 0.22               # bounce / break tones under the voice
+drone = 0.18                    # low ominous drone (0 = off)
+
+[captions]
+size = 104
+highlight = "#FFE135"
+title_box = true
+
+[llm]
+# model = "sonnet"              # Claude model alias; empty = your account default
+
+[telegram]
+# A NEW bot from @BotFather, not the clipgen one. Or env STORYGEN_BOT_TOKEN, or secrets/telegram_token.
+token = ""
+allowed_users = []              # e.g. [<your numeric Telegram id>]; empty = claim with the pairing code
