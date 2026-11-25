@@ -15,6 +15,8 @@ class FakeBot(tg.Bot):
 
     def api(self, method, files=None, http_timeout=60, **params):
         self.calls.append((method, params))
+        if files and "video" in files:
+            self.uploaded = getattr(self, "uploaded", []) + [files["video"][0]]
         self.next_id += 1
         return {"message_id": self.next_id}
 
@@ -33,7 +35,7 @@ def bot(tmp_path, monkeypatch):
     def fake_make(cfg, theme=None, style=None, progress=None, **kw):
         progress("Writing the story")
         made.append({"theme": theme, "style": style})
-        video = tmp_path / f"v{len(made)}.mp4"
+        video = tmp_path / f"a-barber-knew-my-code-{len(made)}.mp4"
         video.write_bytes(b"x")
         return {"video": str(video), "thumbnail": "", "title": "T <b>", "caption": "c", "hashtags": ["#storytime"],
                 "style": style or "layers", "voice": "am_michael", "duration": 51.2, "score": 9,
@@ -70,11 +72,21 @@ def test_story_request_is_queued_made_and_delivered(bot):
     videos = [p for m, p in bot.calls if m == "sendVideo"]
     assert len(videos) == 2 and "T &lt;b&gt;" in videos[0]["caption"] and "(1/2)" in videos[0]["caption"]
     assert "retention score 9/10" in videos[0]["caption"]
+    assert "<code>c\n\n#storytime</code>" in videos[0]["caption"]          # old metadata: caption + tags
+    assert bot.uploaded == ["a-barber-knew-my-code-1.mp4", "a-barber-knew-my-code-2.mp4"]
+
     scripts = [p for m, p in bot.calls if m == "sendMessage" and "Script" in p["text"]]
     assert len(scripts) == 2 and "<blockquote expandable>" in scripts[0]["text"]
     done = [p for m, p in bot.calls if m == "editMessageText"][-1]
     assert "Done: 2/2" in done["text"] and done["reply_markup"]["inline_keyboard"][0][0]["callback_data"].startswith("redo:")
     assert bot.state["history"][-1]["theme"] == "a locked attic"
+
+
+def test_clip_caption_shows_youtube_title_and_description():
+    meta = {"title": "On screen", "youtube_title": "YT <title>", "description": "Hook line.\n\n#shorts #creepy",
+            "style": "layers", "voice": "am_onyx", "duration": 50.0}
+    cap = tg.clip_caption(meta, 1, 1)
+    assert cap.startswith("<b>YT &lt;title&gt;</b>") and "<code>Hook line.\n\n#shorts #creepy</code>" in cap
 
 
 def test_redo_repeats_the_settings_and_the_button_works(bot):

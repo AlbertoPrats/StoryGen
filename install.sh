@@ -37,6 +37,11 @@ KOKORO=https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files
 [ -f assets/fonts/Anton-Regular.ttf ] || curl -fsSL -o assets/fonts/Anton-Regular.ttf \
   https://github.com/google/fonts/raw/main/ofl/anton/Anton-Regular.ttf
 
+echo "==> Music beds (CC0, listed in assets/music/tracks.tsv)"
+grep -v '^#' assets/music/tracks.tsv | while IFS=$'\t' read -r file url _; do
+  [ -n "$file" ] && [ ! -f "assets/music/$file" ] && { curl -fsSL -o "assets/music/$file" "$url" || echo "   could not download $file"; }
+done
+
 echo "==> Claude Code (the only subscription: your Claude Pro plan)"
 if ! command -v claude >/dev/null; then
   curl -fsSL https://claude.ai/install.sh | bash

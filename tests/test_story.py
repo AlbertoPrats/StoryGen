@@ -23,7 +23,8 @@ STORY = {
     "narrator": "male",
     "script": "My neighbor mows his lawn at exactly 3:12 AM.\n\nEvery night. Same time.\n\n"
               "Last night I finally went outside. The mower was off.",
-    "caption": "Nobody mows at 3 AM. Nobody.",
+    "youtube_title": "My neighbor mows his lawn at 3:12 AM every night",
+    "description": "Nobody mows at 3 AM. Nobody.\nWould you have gone outside?",
     "hashtags": ["#storytime", "#creepy"],
 }
 
@@ -32,12 +33,31 @@ STORY = {
 def test_tidy_script_keeps_beats_and_drops_markdown():
     raw = '"**Hook** line here.\n\n\n  Second   beat.  \n\n# Third."'
     assert story_mod.tidy_script(raw) == "Hook line here.\n\nSecond beat.\n\nThird."
+    assert story_mod.tidy_script('Then she whispered, "Don\'t move."') == 'Then she whispered, "Don\'t move."'
 
 
-def test_hashtags_start_with_storytime_unique_and_capped():
-    tags = story_mod.clean_hashtags(["Creepy", "#creepy", "plot twist!", *[f"t{i}" for i in range(30)]], 10)
-    assert tags[0] == "#storytime" and len(tags) == 10 and len(set(tags)) == 10
-    assert "#plottwist" in tags
+def test_hashtags_are_core_tags_then_a_few_topic_tags():
+    core = Config().story.core_hashtags
+    tags = story_mod.clean_hashtags(["Creepy", "#creepy", "plot twist!", "#Shorts", "night shift", "t1"], 2, core)
+    assert tags == core + ["#plottwist", "#nightshift"]              # duplicates of core tags are skipped
+    assert story_mod.clean_hashtags([], 2, core) == core
+    assert len(story_mod.clean_hashtags([f"t{i}" for i in range(30)], 30, core)) == 15
+
+
+def test_youtube_title_and_description():
+    s = {**STORY, "youtube_title": '"My neighbor mows at 3 AM #shorts"', "hashtags": ["#shorts", "#creepy"]}
+    assert story_mod.youtube_title(s) == "My neighbor mows at 3 AM"
+    assert story_mod.youtube_text(s) == STORY["description"] + "\n\n#shorts #creepy"
+    old = {"title": "Old title", "caption": "old caption", "hashtags": ["#x"]}   # story.json before these fields
+    assert story_mod.youtube_title(old) == "Old title" and story_mod.youtube_text(old) == "old caption\n\n#x"
+
+
+def test_slugify_names_files_after_the_clip():
+    from storygen.utils import slugify
+    assert slugify("Nobody's home at 3:12 AM!") == "nobodys-home-at-3-12-am"
+    long = slugify("A barber with a razor at my throat knew my alarm code", 40)
+    assert long == "a-barber-with-a-razor-at-my-throat-knew" and len(long) <= 40
+    assert slugify("???") == "clip"
 
 
 def test_word_count():
@@ -60,10 +80,11 @@ def test_write_story_sends_genre_and_recent_premises(monkeypatch, tmp_path):
     def fake_ask(prompt, schema, system, llm_cfg, what=""):
         prompts.append(prompt)
         if "retention editor" in prompt:
-            return {"scores": {"hook": 9, "open_loop": 8, "escalation": 8, "twist": 9, "spoken_rhythm": 9,
-                               "overall": 6}, "problems": [], "final_score": 9, "title": "Better title",
-                    "script": STORY["script"] + " It was never a mower.", "caption": "c"}
-        return dict(STORY)
+            return {"scores": {k: 8 for k in story_mod.SCORES}, "problems": [], "final_score": 9,
+                    "title": "Better title", "youtube_title": "I followed the 3 AM mower #shorts",
+                    "script": STORY["script"] + " It was never a mower.", "description": "Line one.\nLine two?",
+                    "hashtags": ["night shift", "#Creepy"]}
+        return {**STORY, "narrator": "female"}
 
     monkeypatch.setattr(story_mod, "ask_json", fake_ask)
     st = story_mod.StoryState(cfg)
@@ -72,6 +93,10 @@ def test_write_story_sends_genre_and_recent_premises(monkeypatch, tmp_path):
     assert "Genre:" in prompts[0] and "an old premise" in prompts[0]
     assert s["title"] == "Better title" and s["review"]["final_score"] == 9
     assert s["script"].endswith("It was never a mower.")
+    assert "cliffhanger" in prompts[1].lower() and "filler" in prompts[1].lower()
+    assert "The narrator is a man" in prompts[0] and s["narrator"] == "male"     # [voice].narrator = male
+    assert s["youtube_title"] == "I followed the 3 AM mower" and s["description"] == "Line one.\nLine two?"
+    assert s["hashtags"] == cfg.story.core_hashtags + ["#nightshift"]     # "#Creepy" is a core tag
     themed = story_mod.write_story(cfg, theme="a locked attic", rng=random.Random(1), state=st)
     assert "a locked attic" in prompts[2] and themed["theme"] == "a locked attic"
 
@@ -210,13 +235,15 @@ def test_narrate_falls_back_to_kokoro_when_chatterbox_breaks(tmp_path, monkeypat
     cfg = chatterbox_cfg(tmp_path, monkeypatch)
     (tmp_path / "fakepython").write_text("#!/bin/sh\necho boom >&2\nexit 1\n")
     monkeypatch.setattr(voice, "_kokoro", lambda m, v: FakeKokoro())
-    st, info = pipeline.narrate(cfg, dict(STORY), "af_heart", tmp_path / "v.wav", engine="chatterbox")
-    assert info["engine"] == "kokoro" and info["voice"] == cfg.voice.female[0]
+    st, info = pipeline.narrate(cfg, dict(STORY), "am_onyx", tmp_path / "v.wav", engine="chatterbox")
+    assert info["engine"] == "kokoro" and info["voice"] == "am_onyx"     # same voice as the reference clip
 
 
 def test_pick_voice_by_engine():
     cfg = Config()
     rng = random.Random(0)
+    assert voice.pick_voice(cfg, "female", rng, "chatterbox") == "am_onyx"     # default: always male onyx
+    cfg.voice.narrator = "auto"
     assert voice.pick_voice(cfg, "female", rng, "chatterbox") in cfg.voice.chatterbox_female
     assert voice.pick_voice(cfg, "male", rng, "kokoro") in cfg.voice.male
 
@@ -294,11 +321,49 @@ def test_make_story_end_to_end_offline(tmp_path, monkeypatch):
     cfg = kokoro_cfg(work_dir=str(tmp_path / "work"), output_dir=str(tmp_path / "out"))
     cfg.voice.align = False
     short = {**STORY, "script": "My neighbor mows at night.\n\nThe mower was off."}
+    cfg.music.dir = str(tmp_path / "music")
+    tone(tmp_path / "music" / "t.wav", 2.0)                        # shorter than the clip: looped
     meta = pipeline.make_story(cfg, story=short, style="layers", seed=11)
     from storygen.utils import media_info
+    assert meta["music"] == "t.wav"
+    assert Path(meta["video"]).name == "my-neighbor-mows-his-lawn-at-3-12-am-every-night.mp4"
+    assert Path(meta["thumbnail"]).name == "my-neighbor-mows-his-lawn-at-3-12-am-every-night.jpg"
+    from storygen.utils import ffprobe
+    tags = {k.lower(): v for k, v in ffprobe(meta["video"])["format"]["tags"].items()}
+    assert tags["title"] == STORY["youtube_title"] and tags["genre"] == "Horror"
+    assert tags["description"].startswith("Nobody mows at 3 AM.") and "#storytime" in tags["description"]
+    assert tags["keywords"] == "storytime, creepy" and tags["comment"] == STORY["premise"]
     info = media_info(meta["video"])
     assert (info["width"], info["height"]) == (1080, 1920) and info["has_audio"]
     assert info["duration"] == pytest.approx(meta["duration"], abs=0.15)
     assert Path(meta["thumbnail"]).is_file()
     saved = json.loads((Path(meta["video"]).parent / "story.json").read_text())
     assert saved["style"] == "layers" and saved["title"] == STORY["title"] and saved["rings_broken"] > 0
+
+
+# ---------------------------------------------------------------- music
+def tone(path: Path, seconds: float, freq: int = 220) -> Path:
+    from storygen.utils import ffmpeg
+    path.parent.mkdir(parents=True, exist_ok=True)
+    ffmpeg(["-f", "lavfi", "-i", f"sine=frequency={freq}:duration={seconds}", str(path)])
+    return path
+
+
+def test_music_bed_loops_short_tracks_and_offsets_long_ones(tmp_path):
+    from storygen import music
+    from storygen.utils import media_info
+    cfg = Config()
+    cfg.music.dir = str(tmp_path / "m")
+    assert music.prepare(cfg, 5.0, tmp_path / "none.wav", random.Random(0)) is None    # no tracks
+    tone(tmp_path / "m" / "short.wav", 1.5)
+    (tmp_path / "m" / "notes.txt").write_text("not audio")
+    got = music.prepare(cfg, 5.0, tmp_path / "a.wav", random.Random(0))
+    assert got == {"track": "short.wav", "offset": 0.0}
+    info = media_info(tmp_path / "a.wav")
+    assert info["duration"] == pytest.approx(5.0, abs=0.05)
+    (tmp_path / "m" / "short.wav").unlink()
+    tone(tmp_path / "m" / "long.wav", 30.0)
+    got = music.prepare(cfg, 5.0, tmp_path / "b.wav", random.Random(3))
+    assert got["track"] == "long.wav" and 0 < got["offset"] <= 15.0
+    cfg.music.enabled = False
+    assert music.prepare(cfg, 5.0, tmp_path / "c.wav", random.Random(0)) is None

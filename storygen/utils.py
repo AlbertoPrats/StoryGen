@@ -92,7 +92,12 @@ def fmt_ts(t: float) -> str:
 
 
 def slugify(text: str, maxlen: int = 40) -> str:
+    """"Nobody's home at 3 AM!" -> "nobodys-home-at-3-am"; cut at a word boundary, at most maxlen chars."""
     import re
-    s = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE).strip().lower()
-    s = re.sub(r"[\s_-]+", "-", s)
-    return s[:maxlen].strip("-") or "clip"
+    s = re.sub(r"['’]", "", text)
+    s = re.sub(r"[^\w\s-]", " ", s, flags=re.UNICODE).strip().lower()
+    s = re.sub(r"[\s_-]+", "-", s).strip("-")
+    if len(s) > maxlen:
+        cut = s[: maxlen + 1]
+        s = cut[: cut.rfind("-")] if "-" in cut[1:] else s[:maxlen]
+    return s.strip("-") or "clip"

@@ -75,21 +75,26 @@ def parse_request(text: str) -> dict:
 
 
 def clip_caption(meta: dict, index: int, of: int, limit: int = 1024) -> str:
+    """Telegram caption: the YouTube title and description ready to copy, then the clip facts."""
     e = lambda x: html.escape(str(x), quote=False)  # noqa: E731
-    head = f"<b>{e(meta['title'])}</b>" + (f"  <i>({index}/{of})</i>" if of > 1 else "")
+    title = meta.get("youtube_title") or meta["title"]
+    head = f"<b>{e(title)}</b>" + (f"  <i>({index}/{of})</i>" if of > 1 else "")
     info = f"🎨 {meta['style']} · 🎙 {meta['voice']} · {meta['duration']:.0f} s"
+    if meta.get("music"):
+        info += f" · 🎵 {Path(meta['music']).stem}"
     if meta.get("score") is not None:
         info += f" · retention score {meta['score']}/10"
-    tags = e(" ".join(meta.get("hashtags") or []))
-    caption = meta.get("caption") or ""
+    desc = meta.get("description")
+    if desc is None:                          # metadata from before the YouTube fields
+        desc = "\n\n".join(x for x in (meta.get("caption"), " ".join(meta.get("hashtags") or [])) if x)
 
-    def build(cap: str) -> str:
-        return "\n\n".join(x for x in (head, info, e(cap), tags) if x)
+    def build(d: str) -> str:
+        return "\n\n".join(x for x in (head, f"<code>{e(d)}</code>" if d else "", info) if x)
 
-    text = build(caption)
-    while len(text) > limit and caption:
-        caption = caption[: max(0, len(caption) - (len(text) - limit) - 2)].rstrip()
-        text = build(caption + "…" if caption else "")
+    text = build(desc)
+    while len(text) > limit and desc:
+        desc = desc[: max(0, len(desc) - (len(text) - limit) - 2)].rstrip()
+        text = build(desc + "…" if desc else "")
     return text[:limit]
 
 
@@ -379,7 +384,8 @@ class Bot:
         self.status(job, f"✅ Done: {sent}/{n} clip(s) in {(time.time() - t0) / 60:.1f} min.", reply_markup=button)
 
     def send_clip(self, chat_id: int, meta: dict, index: int, of: int, reply_to: int | None) -> dict | None:
-        video = self.fit_size(Path(meta["video"]))
+        original = Path(meta["video"])
+        video = self.fit_size(original)
         info = media_info(video)
         params = {"chat_id": chat_id, "caption": clip_caption(meta, index, of), "parse_mode": "HTML",
                   "supports_streaming": "true", "width": info.get("width") or 1080,
@@ -388,7 +394,7 @@ class Bot:
             params["reply_parameters"] = '{"message_id": %d, "allow_sending_without_reply": true}' % reply_to
         thumb = Path(meta.get("thumbnail") or "")
         with open(video, "rb") as vf:
-            files = {"video": (video.name, vf, "video/mp4")}
+            files = {"video": (original.name, vf, "video/mp4")}      # the clip's name, never ".tg.mp4"
             th = None
             if thumb.is_file():
                 th = thumb.with_name(thumb.stem + ".tg.jpg")

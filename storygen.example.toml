@@ -8,11 +8,12 @@ target_seconds = 52.0           # narration length Claude aims for
 max_seconds = 58.0              # hard cap for the clip; the voice speeds up (or Claude shortens) to fit
 words_per_second = 2.6
 review = true                   # second Claude pass: a retention editor tightens the script
-hashtags = 10
+hashtags = 2                    # topic-specific, after the fixed core_hashtags (#shorts #scarystories ...)
 # genres = ["finding out a partner is cheating through one small wrong detail, and the truth is worse", ...]
 
 [voice]
 engine = "chatterbox"           # chatterbox (expressive, ~4x slower than real time on CPU) | kokoro (fast, flatter)
+narrator = "male"               # male = always the Chatterbox copy of am_onyx | female | auto (Claude picks)
 # chatterbox_male = ["am_onyx"]   # Kokoro voice whose reference clip Chatterbox copies; "builtin" = its own voice
 # chatterbox_female = ["af_heart"]
 max_stretch = 1.15              # Chatterbox: fastest time-stretch used to fit max_seconds
@@ -24,8 +25,13 @@ align = true                    # word timings from faster-whisper (else spread 
 
 [scene]
 style = "random"                # random | layers | escape
-sfx_volume = 0.22               # bounce / break tones under the voice
-drone = 0.18                    # low ominous drone (0 = off)
+sfx_volume = 0.10               # bounce / break tones under the voice
+drone = 0.18                    # low synth drone, only when there is no music (0 = off)
+
+[music]
+enabled = true                  # eerie CC0 music bed (assets/music, downloaded by install.sh)
+volume = 0.22                   # after normalising each track to -20 LUFS; ducked while the voice speaks
+# dir = "assets/music"          # any audio file in it is used
 
 [captions]
 size = 104

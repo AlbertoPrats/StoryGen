@@ -1,6 +1,7 @@
-"""Stage 6 - one ffmpeg pass: animation frames piped in, captions burned, voice + hit sounds mixed.
+"""Stage 6 - one ffmpeg pass: animation frames piped in, captions burned, voice + hit sounds + music mixed.
 
-The hit sounds are ducked under the voice (sidechain), then the mix is normalised to -14 LUFS.
+The hit sounds are ducked hard under the voice and the music gently (sidechain), then the mix is
+normalised to -14 LUFS.
 """
 from __future__ import annotations
 
@@ -17,23 +18,31 @@ def _filter_path(p: Path) -> str:
 
 
 def render(cfg: Config, sim: Sim, voice_wav: Path, sfx_wav: Path, ass: Path, duration: float,
-           out: Path, seed: int = 0, progress=None) -> Path:
+           out: Path, seed: int = 0, progress=None, music_wav: Path | None = None,
+           tags: dict | None = None) -> Path:
+    """`tags`: MP4 metadata (title, description, keywords, ...), written into the file."""
     sc = cfg.scene
     W, H, fps = sc.width, sc.height, sc.fps
+    m = music_wav is not None
     fc = (
         f"[0:v]ass='{_filter_path(ass)}':fontsdir='{_filter_path(ASSETS / 'fonts')}',format=yuv420p[v];"
-        f"[1:a]aresample=48000,pan=stereo|c0=c0|c1=c0,apad,asplit=2[vo][key];"
+        f"[1:a]aresample=48000,pan=stereo|c0=c0|c1=c0,apad,asplit={3 if m else 2}[vo][key]{'[key2]' if m else ''};"
         f"[2:a]aresample=48000,volume={sc.sfx_volume}[fx];"
         f"[fx][key]sidechaincompress=threshold=0.04:ratio=5:attack=15:release=350[duck];"
-        f"[vo][duck]amix=inputs=2:normalize=0:duration=longest,"
+        + (f"[3:a]aresample=48000,volume={cfg.music.volume}[mu];"
+           f"[mu][key2]sidechaincompress=threshold=0.05:ratio={cfg.music.duck}:attack=40:release=700[mduck];"
+           if m else "")
+        + f"[vo][duck]{'[mduck]' if m else ''}amix=inputs={3 if m else 2}:normalize=0:duration=longest,"
         f"loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[a]"
     )
     cmd = [require("ffmpeg"), "-hide_banner", "-loglevel", "error", "-y",
            "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", str(fps), "-i", "-",
-           "-i", str(voice_wav), "-i", str(sfx_wav),
+           "-i", str(voice_wav), "-i", str(sfx_wav), *(["-i", str(music_wav)] if m else []),
            "-filter_complex", fc, "-map", "[v]", "-map", "[a]",
            "-c:v", "libx264", "-preset", sc.preset, "-crf", str(sc.crf), "-r", str(fps),
-           "-c:a", "aac", "-b:a", "192k", "-t", f"{duration:.3f}", "-movflags", "+faststart", str(out)]
+           "-c:a", "aac", "-b:a", "192k", "-t", f"{duration:.3f}",
+           *[a for k, v in (tags or {}).items() if v for a in ("-metadata", f"{k}={v}")],
+           "-movflags", "+faststart", str(out)]
     out.parent.mkdir(parents=True, exist_ok=True)
     log.debug("$ %s", " ".join(cmd))
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)

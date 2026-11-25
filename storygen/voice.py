@@ -78,6 +78,8 @@ def engine_of(cfg: Config) -> str:
 
 def pick_voice(cfg: Config, narrator: str, rng, engine: str | None = None) -> str:
     v = cfg.voice
+    if (v.narrator or "auto").lower() in ("male", "female"):
+        narrator = v.narrator.lower()
     if (engine or engine_of(cfg)) == "chatterbox":
         pool = v.chatterbox_female if narrator == "female" else v.chatterbox_male
     else:

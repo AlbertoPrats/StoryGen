@@ -10,3 +10,7 @@ storygen.toml
 .env
 assets/models/*.onnx
 assets/models/*.bin
+assets/music/*
+!assets/music/tracks.tsv
+CLAUDE.md
+CLAUDEPROGRESS.md

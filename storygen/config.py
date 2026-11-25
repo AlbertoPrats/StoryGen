@@ -16,7 +16,11 @@ class StoryCfg:
     min_seconds: float = 30.0
     words_per_second: float = 2.6   # measured: 157 words took 59.9 s at Kokoro speed 1.1 (incl. pauses)
     review: bool = True             # second Claude pass: a retention editor tightens the script
-    hashtags: int = 10
+    # Hashtags: these fixed ones on every clip, then `hashtags` topic-specific ones from Claude. More than 15 in
+    # total makes YouTube ignore all of them; the first three show above the title.
+    core_hashtags: list = field(default_factory=lambda: [
+        "#shorts", "#scarystories", "#horrorstory", "#scary", "#creepy", "#horror", "#storytime"])
+    hashtags: int = 2               # topic-specific hashtags after the fixed ones
     # Genres picked at random (one per story) unless the user gives a theme. Variety keeps a feed fresh.
     # Mystery / horror / tension only. One is picked at random per story unless the user gives a theme.
     genres: list = field(default_factory=lambda: [
@@ -41,6 +45,9 @@ class VoiceCfg:
     # chatterbox: Chatterbox Turbo (MIT), expressive, in its own venv (.venv-tts), ~4x slower than real time
     #             on a 6-core CPU. kokoro: Kokoro-82M (Apache-2.0), fast but flatter; also the fallback.
     engine: str = "chatterbox"
+    # Narrator gender for every story: "male" (always the Chatterbox copy of am_onyx), "female", or "auto"
+    # (Claude picks per story).
+    narrator: str = "male"
     chatterbox_python: str = ".venv-tts/bin/python"
     # Chatterbox copies the voice of a short reference clip made once with this Kokoro voice
     # ("builtin" = Chatterbox's own voice).
@@ -78,10 +85,19 @@ class SceneCfg:
     min_speed: float = 750.0        # the ball never slows below this (keeps it lively)
     max_speed: float = 2100.0
     escape_gap_deg: float = 65.0    # "escape" style: opening in each ring
-    sfx_volume: float = 0.22        # bounce/break tones under the voice
-    drone: float = 0.18             # low ominous drone inside the sound track (0 = off)
+    sfx_volume: float = 0.10        # bounce/break tones under the voice (0.22 until session 4: too loud)
+    drone: float = 0.18             # low synth drone, only when there is no music (0 = off)
     crf: int = 20
     preset: str = "veryfast"
+
+
+@dataclass
+class MusicCfg:
+    enabled: bool = True
+    dir: str = "assets/music"       # CC0 tracks from tracks.tsv (install.sh) + any audio file put there
+    volume: float = 0.22            # gain after normalising each track to -20 LUFS (~14 dB under the voice)
+    duck: float = 2.5               # sidechain ratio while the narrator speaks (1 = no ducking)
+    fade_in: float = 0.6            # seconds; short so the hook starts with the music already there
 
 
 @dataclass
@@ -128,6 +144,7 @@ class Config:
     story: StoryCfg = field(default_factory=StoryCfg)
     voice: VoiceCfg = field(default_factory=VoiceCfg)
     scene: SceneCfg = field(default_factory=SceneCfg)
+    music: MusicCfg = field(default_factory=MusicCfg)
     captions: CaptionCfg = field(default_factory=CaptionCfg)
     llm: LLMCfg = field(default_factory=LLMCfg)
     telegram: TelegramCfg = field(default_factory=TelegramCfg)

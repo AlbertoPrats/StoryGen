@@ -1,0 +1,11 @@
+# CC0 (public domain) music beds, downloaded by install.sh into this folder. No attribution needed; credited anyway.
+# Any other audio file you put in assets/music/ is used too (make sure you may use it). Columns: tab-separated.
+# file	url	source page	title	author	license
+creepy.ogg	https://opengameart.org/sites/default/files/CrEEP.ogg	https://opengameart.org/content/creepy	Creepy	TokyoGeisha	CC0
+ghost-piano.ogg	https://opengameart.org/sites/default/files/GoshtPiano2.ogg	https://opengameart.org/content/dark-environment-horror-games	Dark environment / Horror games	KiluaBoy	CC0
+eyes-in-the-shadows.flac	https://opengameart.org/sites/default/files/eyes_in_the_shadows_loop.flac	https://opengameart.org/content/eyes-in-the-shadows	Eyes in the Shadows (loop)	Tsorthan Grove	CC0
+hallway.ogg	https://opengameart.org/sites/default/files/hallway.ogg	https://opengameart.org/content/hallway	Hallway	thenewkgb	CC0
+horror-loop.mp3	https://opengameart.org/sites/default/files/horror_loop.mp3	https://opengameart.org/content/horror-loop	Horror Loop	TinyWorlds	CC0
+ancient-grudge.mp3	https://opengameart.org/sites/default/files/ruskerdax_-_ancient_grudge.mp3	https://opengameart.org/content/ancient-grudge	Ancient Grudge	Ruskerdax	CC0
+nobodys-home.wav	https://opengameart.org/sites/default/files/nobodys_home.wav	https://opengameart.org/content/nobodys-home	Nobody's Home	aspiringcodemonkey	CC0
+creepy-ambient-loop.ogg	https://opengameart.org/sites/default/files/creepyloop-v2_0.ogg	https://opengameart.org/content/creepy-ambient-loop	Creepy Ambient Loop	epb9000	CC0
