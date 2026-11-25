@@ -38,9 +38,9 @@ videos) and has its own Telegram bot.
 A real, unedited clip made by storygen (52.9 s, `layers` background, Chatterbox voice, `creepy.ogg` music bed),
 re-encoded to 720p for the repository. Click the image to play it.
 
-<a href="https://github.com/AlbertoPrats/StoryGen/raw/main/docs/example-clip.mp4"><img src="docs/example-clip.jpg" width="270" alt="Example clip: The barber knew a name only my wife uses"></a>
+<a href="https://github.com/AlbertoPrats/StoryGen/blob/main/docs/example-clip.mp4"><img src="docs/example-clip.jpg" width="270" alt="Example clip: The barber knew a name only my wife uses"></a>
 
-[▶ Watch the example clip (MP4, 9.7 MB)](https://github.com/AlbertoPrats/StoryGen/raw/main/docs/example-clip.mp4)
+[▶ Watch the example clip (MP4, 9.7 MB)](https://github.com/AlbertoPrats/StoryGen/blob/main/docs/example-clip.mp4)
 
 ## Install
 
